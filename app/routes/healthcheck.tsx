@@ -1,4 +1,4 @@
-// learn more: https://fly.io/docs/reference/configuration/#services-http_checks
+// Health check endpoint for Coolify to monitor the application status
 import type { LoaderFunctionArgs } from "@remix-run/node";
 
 import { prisma } from "~/db.server";

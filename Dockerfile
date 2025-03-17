@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y openssl sqlite3
 # Install all node_modules, including dev dependencies
 FROM base as deps
 
-WORKDIR /myapp
+WORKDIR /app
 
 ADD package.json .npmrc ./
 RUN npm install --include=dev
@@ -18,18 +18,18 @@ RUN npm install --include=dev
 # Setup production node_modules
 FROM base as production-deps
 
-WORKDIR /myapp
+WORKDIR /app
 
-COPY --from=deps /myapp/node_modules /myapp/node_modules
+COPY --from=deps /app/node_modules /app/node_modules
 ADD package.json .npmrc ./
 RUN npm prune --omit=dev
 
 # Build the app
 FROM base as build
 
-WORKDIR /myapp
+WORKDIR /app
 
-COPY --from=deps /myapp/node_modules /myapp/node_modules
+COPY --from=deps /app/node_modules /app/node_modules
 
 ADD prisma .
 RUN npx prisma generate
@@ -41,21 +41,31 @@ RUN npm run build
 FROM base
 
 ENV DATABASE_URL=file:/data/sqlite.db
-ENV PORT="8080"
+ENV PORT="3000"
 ENV NODE_ENV="production"
 
 # add shortcut for connecting to database CLI
 RUN echo "#!/bin/sh\nset -x\nsqlite3 \$DATABASE_URL" > /usr/local/bin/database-cli && chmod +x /usr/local/bin/database-cli
 
-WORKDIR /myapp
+WORKDIR /app
 
-COPY --from=production-deps /myapp/node_modules /myapp/node_modules
-COPY --from=build /myapp/node_modules/.prisma /myapp/node_modules/.prisma
+COPY --from=production-deps /app/node_modules /app/node_modules
+COPY --from=build /app/node_modules/.prisma /app/node_modules/.prisma
 
-COPY --from=build /myapp/build /myapp/build
-COPY --from=build /myapp/public /myapp/public
-COPY --from=build /myapp/package.json /myapp/package.json
-COPY --from=build /myapp/start.sh /myapp/start.sh
-COPY --from=build /myapp/prisma /myapp/prisma
+COPY --from=build /app/build /app/build
+COPY --from=build /app/public /app/public
+COPY --from=build /app/package.json /app/package.json
+COPY --from=build /app/start.sh /app/start.sh
+COPY --from=build /app/prisma /app/prisma
 
-ENTRYPOINT [ "./start.sh" ]
+# Create data directory for SQLite
+RUN mkdir -p /data && chown -R node:node /data
+VOLUME /data
+
+# Use non-root user
+USER node
+
+# Run migrations and start the application
+CMD ["sh", "./start.sh"]
+
+EXPOSE 3000
