@@ -1,7 +1,5 @@
 # Remix Midwest Emo Stack
 
-![The Remix Midwest Emo Stack]
-
 Learn more about [Remix Stacks](https://remix.run/stacks).
 
 ```sh
