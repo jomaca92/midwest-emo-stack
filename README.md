@@ -3,7 +3,7 @@
 Learn more about [Remix Stacks](https://remix.run/stacks).
 
 ```sh
-npx create-remix@latest --template remix-run/midwest-emo-stack
+npx create-remix@latest --template jomaca92/midwest-emo-stack
 ```
 
 ## What's in the stack
