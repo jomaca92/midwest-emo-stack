@@ -1,14 +1,14 @@
 # base node image
-FROM node:18-bullseye-slim as base
+FROM node:18-bullseye-slim AS base
 
 # set for base and all layer that inherit from it
 ENV NODE_ENV production
 
 # Install openssl for Prisma
-RUN apt-get update && apt-get install -y openssl sqlite3
+RUN apt-get update && apt-get install -y openssl sqlite3 curl  
 
 # Install all node_modules, including dev dependencies
-FROM base as deps
+FROM base AS deps
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ ADD package.json .npmrc ./
 RUN npm install --include=dev
 
 # Setup production node_modules
-FROM base as production-deps
+FROM base AS production-deps
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ ADD package.json .npmrc ./
 RUN npm prune --omit=dev
 
 # Build the app
-FROM base as build
+FROM base AS build
 
 WORKDIR /app
 
@@ -43,6 +43,7 @@ FROM base
 ENV DATABASE_URL=file:/data/sqlite.db
 ENV PORT="3000"
 ENV NODE_ENV="production"
+ENV SESSION_SECRET="replace-this-with-a-real-secret-in-production"
 
 # add shortcut for connecting to database CLI
 RUN echo "#!/bin/sh\nset -x\nsqlite3 \$DATABASE_URL" > /usr/local/bin/database-cli && chmod +x /usr/local/bin/database-cli
@@ -64,6 +65,9 @@ VOLUME /data
 
 # Use non-root user
 USER node
+
+# Add health check to verify the application is running
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD curl -f http://localhost:3000/ || exit 1
 
 # Run migrations and start the application
 CMD ["sh", "./start.sh"]
